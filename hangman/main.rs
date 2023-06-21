@@ -14,14 +14,24 @@ fn main() {
         println!("\nAttempts remaining: {}", attempts);
         println!("Guessed letters: {}", guessed_letters.iter().collect::<String>());
 
-        let guessed_letter = get_input("Enter a letter: ");
+        let guess = get_input("Enter a letter or the full word: ");
 
-        if secret_word.contains(&guessed_letter) {
-            for (index, letter) in secret_word.chars().enumerate() {
-                if letter == guessed_letter.chars().next().unwrap() {
-                    guessed_letters[index] = letter;
+        if guess.chars().count() == 1 {
+            let guessed_letter = guess.chars().next().unwrap();
+
+            if secret_word.contains(guessed_letter) {
+                for (index, letter) in secret_word.chars().enumerate() {
+                    if letter == guessed_letter {
+                        guessed_letters[index] = letter;
+                    }
                 }
+            } else {
+                println!("Incorrect guess!");
+                attempts -= 1;
             }
+        } else if guess == secret_word {
+            println!("Congratulations, you won!");
+            break;
         } else {
             println!("Incorrect guess!");
             attempts -= 1;
