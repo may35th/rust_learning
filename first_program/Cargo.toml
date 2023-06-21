@@ -1,0 +1,15 @@
+[package]
+name = "first_program"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "first_program_library"
+path = "main.rs"
+
+[dependencies]
+rand = "0.8"
+
+[[bin]]
+name = "first_program"
+path = "main.rs"
