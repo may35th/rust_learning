@@ -1,6 +1,7 @@
 use rand::Rng;
 use std::io::{self, Write};
 
+// hangman cli game
 fn main() {
     println!("Welcome to Hangman!");
 
