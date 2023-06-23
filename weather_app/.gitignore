@@ -2,4 +2,4 @@
 /target
 
 # Cargo.lock file
-Cargo.lock
+/Cargo.lock
