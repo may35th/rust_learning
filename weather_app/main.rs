@@ -18,7 +18,6 @@ struct Response {
 #[tokio::main]
 async fn main() {
     println!("RUST WEATHER CLI");
-    println!("Stockholm Sweden Weather Forecast");
 
     let city = get_input("Enter your city and country/state: ");
     if let Err(err) = get_coordinates(&city).await {
@@ -49,9 +48,39 @@ struct WeatherResponse {
     hourly: HourlyWeather,
 }
 
+// fn format_local_time(time: &str) -> String {
+//     let trimmed_time = &time[5..]; // Remove the year portion
+//     let datetime = chrono::NaiveDateTime::parse_from_str(trimmed_time, "%m-%dT%H:%M").unwrap();
+//     let formatted_time = datetime.format("%m/%d %I:%M %p").to_string();
+//     formatted_time
+// }
+
+fn draw_graph(times: &[String], temperatures: &[f32]) {
+    let max_temperature = temperatures.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+    let min_temperature = temperatures.iter().cloned().fold(f32::INFINITY, f32::min);
+
+    let temperature_range = max_temperature - min_temperature;
+    let graph_height = 10;
+    let temperature_per_height = temperature_range / graph_height as f32;
+
+    println!("Temperature Graph");
+
+    for (time, temperature) in times.iter().zip(temperatures.iter()) {
+        let height = ((temperature - min_temperature) / temperature_per_height) as usize;
+
+        print!("{:<5} | ", time);
+
+        for _ in 0..height {
+            print!("█");
+        }
+
+        println!(" {:.1}°F", temperature);
+    }
+}
+
 async fn get_weather(latitude: &str, longitude: &str) -> Result<(), Error> {
     let url = format!(
-        "https://api.open-meteo.com/v1/forecast?latitude={}&longitude={}&hourly=temperature_2m&temperature_unit=fahrenheit&forecast_days=3&timezone=Europe%2FBerlin",
+        "https://api.open-meteo.com/v1/forecast?latitude={}&longitude={}&hourly=temperature_2m&temperature_unit=fahrenheit&forecast_days=3&timezone=America%2FNew_York",
         latitude,
         longitude
     );
@@ -69,10 +98,9 @@ async fn get_weather(latitude: &str, longitude: &str) -> Result<(), Error> {
 
     let times = parsed_response.hourly.time;
     let temperatures = parsed_response.hourly.temperature_2m;
+    // let local_times: Vec<String> = times.iter().map(|time| format_local_time(time)).collect();
 
-    for (time, temperature) in times.into_iter().zip(temperatures.into_iter()) {
-        println!("Time: {}, Temperature: {}°F", time, temperature);
-    }
+    draw_graph(&times, &temperatures);
 
     Ok(())
 }
