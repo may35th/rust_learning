@@ -36,15 +36,56 @@ fn get_input(prompt: &str) -> String {
     input.trim().to_lowercase()
 }
 
+#[derive(Debug, Deserialize)]
+struct HourlyWeather {
+    time: Vec<String>,
+    temperature_2m: Vec<f32>,
+}
+
+#[derive(Debug, Deserialize)]
+struct WeatherResponse {
+    latitude: f32,
+    longitude: f32,
+    hourly: HourlyWeather,
+}
+
+async fn get_weather(latitude: &str, longitude: &str) -> Result<(), Error> {
+    let url = format!(
+        "https://api.open-meteo.com/v1/forecast?latitude={}&longitude={}&hourly=temperature_2m&temperature_unit=fahrenheit&forecast_days=3&timezone=Europe%2FBerlin",
+        latitude,
+        longitude
+    );
+
+    let response = reqwest::get(&url).await?;
+    let body = response.text().await?;
+
+    let parsed_response: WeatherResponse = match serde_json::from_str(&body) {
+        Ok(parsed) => parsed,
+        Err(err) => {
+            eprintln!("Failed to parse weather response: {}", err);
+            return Ok(());
+        }
+    };
+
+    let times = parsed_response.hourly.time;
+    let temperatures = parsed_response.hourly.temperature_2m;
+
+    for (time, temperature) in times.into_iter().zip(temperatures.into_iter()) {
+        println!("Time: {}, Temperature: {}°F", time, temperature);
+    }
+
+    Ok(())
+}
+
 async fn get_coordinates(city: &str) -> Result<(), Error> {
-    let url = format!("https://geocode.maps.co/search?q={}", "{".to_string() + city + "}");
+    let url = format!("https://geocode.maps.co/search?q={}", city);
     let response = reqwest::get(&url).await?;
     let body = response.text().await?;
 
     let parsed_response: Vec<Response> = match serde_json::from_str(&body) {
         Ok(parsed) => parsed,
         Err(err) => {
-            eprintln!("Failed to parse response: {}", err);
+            eprintln!("Failed to parse coordinates response: {}", err);
             return Ok(());
         }
     };
@@ -54,6 +95,8 @@ async fn get_coordinates(city: &str) -> Result<(), Error> {
         let longitude = &result.longitude;
         println!("Latitude: {}", latitude);
         println!("Longitude: {}", longitude);
+
+        get_weather(latitude, longitude).await?;
     } else {
         eprintln!("No coordinates found for the given city.");
     }
