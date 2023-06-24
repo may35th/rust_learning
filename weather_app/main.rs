@@ -18,7 +18,7 @@ struct Response {
 #[tokio::main]
 async fn main() {
     println!("RUST WEATHER CLI");
-
+    println!("all times are in EST");
     let city = get_input("Enter your city and country/state: ");
     if let Err(err) = get_coordinates(&city).await {
         eprintln!("Error: {}", err);
@@ -48,12 +48,6 @@ struct WeatherResponse {
     hourly: HourlyWeather,
 }
 
-// fn format_local_time(time: &str) -> String {
-//     let trimmed_time = &time[5..]; // Remove the year portion
-//     let datetime = chrono::NaiveDateTime::parse_from_str(trimmed_time, "%m-%dT%H:%M").unwrap();
-//     let formatted_time = datetime.format("%m/%d %I:%M %p").to_string();
-//     formatted_time
-// }
 
 fn draw_graph(times: &[String], temperatures: &[f32]) {
     let max_temperature = temperatures.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
@@ -65,10 +59,14 @@ fn draw_graph(times: &[String], temperatures: &[f32]) {
 
     println!("Temperature Graph");
 
+    let max_time_width = times.iter().map(|time| time.len()).max().unwrap_or(0);
+
     for (time, temperature) in times.iter().zip(temperatures.iter()) {
         let height = ((temperature - min_temperature) / temperature_per_height) as usize;
 
-        print!("{:<5} | ", time);
+        let padded_time = format!("{:<width$}", time, width = max_time_width);
+
+        print!("{} | ", padded_time);
 
         for _ in 0..height {
             print!("█");
@@ -98,9 +96,53 @@ async fn get_weather(latitude: &str, longitude: &str) -> Result<(), Error> {
 
     let times = parsed_response.hourly.time;
     let temperatures = parsed_response.hourly.temperature_2m;
-    // let local_times: Vec<String> = times.iter().map(|time| format_local_time(time)).collect();
 
-    draw_graph(&times, &temperatures);
+    let formatted_times: Vec<String> = times
+        .iter()
+        .map(|time| {
+            let date_parts: Vec<&str> = time.split('T').collect();
+            let time_parts: Vec<&str> = date_parts[1].split(':').collect();
+
+            let hour: i32 = time_parts[0].parse().unwrap();
+            let minute: &str = time_parts[1];
+
+            let formatted_hour = if hour == 0 {
+                12
+            } else if hour > 12 {
+                hour - 12
+            } else {
+                hour
+            };
+
+            let am_pm = if hour < 12 {
+                "AM"
+            } else {
+                "PM"
+            };
+
+            let day_month_parts: Vec<&str> = date_parts[0].split('-').collect();
+            let month: &str = match day_month_parts[1] {
+                "01" => "Jan",
+                "02" => "Feb",
+                "03" => "Mar",
+                "04" => "Apr",
+                "05" => "May",
+                "06" => "Jun",
+                "07" => "Jul",
+                "08" => "Aug",
+                "09" => "Sep",
+                "10" => "Oct",
+                "11" => "Nov",
+                "12" => "Dec",
+                _ => "",
+            };
+            let day: &str = day_month_parts[2];
+
+            format!("{} {}, {}:{:02} {}", month, day, formatted_hour, minute, am_pm)
+        })
+        .collect();
+
+    draw_graph(&formatted_times, &temperatures);
 
     Ok(())
 }
